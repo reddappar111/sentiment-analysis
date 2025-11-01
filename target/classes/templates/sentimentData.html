@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sentiment Data</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        const feedsData = /*[[${feedsData}]]*/ 'default message';
+        /*]]>*/
+
+    </script>
+    <script>
+    $(document).ready(function() {
+            // Use event delegation to handle click events on dynamically added elements
+            $('.grid-container').on('click', '[class^="grid-item"]', function() {
+                const ticker = $(this).find('.ticker').data('ticker');
+                const filteredFeed = feedsData.feed.filter(item =>
+                    item.ticker_sentiment.some(tickerItem => tickerItem.ticker === ticker)
+                );
+
+                displayFeed(filteredFeed,ticker);
+            });
+        });
+
+       function displayFeed(feed, ticker) {
+            const feedContainer = $('#feed-container');
+            feedContainer.empty();
+            $('#feedModalLabel').text(`Feed - ` + ticker);
+
+            feed.forEach(item => {
+                // Filter based on ticker name
+                const tickerSentiment = item.ticker_sentiment.find(ts => ts.ticker === ticker);
+                if (tickerSentiment) {
+                    // Determine the background color based on ticker_sentiment_label
+                    //const sentimentLabel = tickerSentiment.ticker_sentiment_label;
+                    const backgroundColor = getBackgroundColor(tickerSentiment.ticker_sentiment_label);
+                    const feedItem = `
+                    <tr style="background-color: ${backgroundColor};">
+                        <td><a href="${item.url}" target="_blank">${item.title}</a></td>
+                        <td>${item.summary}</td>
+                        <td>${item.time_published}</td>
+                    </tr>
+                    `;
+                    feedContainer.append(feedItem);
+                }
+            });
+
+            // Show the modal
+            $('#feedModal').modal('show');
+        }
+
+        function getBackgroundColor(sentimentLabel) {
+            switch (sentimentLabel.toLowerCase()) {
+                case 'somewhat-bullish':
+                    return 'lightgreen';
+                case 'bullish':
+                    return 'green';
+                case 'bearish':
+                    return 'red';
+                case 'somewhat-bearish':
+                    return '#b55151';
+                case 'neutral':
+                    return 'orange';
+                default:
+                    return 'white'; // Default color
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const overallGridItem = document.getElementById('average-score');
+            const feedModal = new bootstrap.Modal(document.getElementById('feedModal'), {
+                keyboard: false
+            });
+
+            overallGridItem.addEventListener('click', function() {
+                const feedContainer = $('#feed-container');
+                feedContainer.empty();
+
+                feedsData.feed.forEach(feed => {
+                    //const feedRow = document.createElement('tr');
+                    //feedRow.style.backgroundColor = getBackgroundColor(feed.overall_sentiment_label.toLowerCase().replace('_', '-'));
+                    //feedRow.className = feed.overall_sentiment_label.toLowerCase().replace('_', '-');
+                    const backgroundColor = getBackgroundColor(feed.overall_sentiment_label.toLowerCase().replace('_', '-'));
+                    const feedItem = `
+                    <tr style="background-color: ${backgroundColor};">
+                        <td><a href="${feed.url}" target="_blank">${feed.title}</a></td>
+                        <td>${feed.summary}</td>
+                        <td>${feed.time_published}</td>
+                    </tr>
+                    `;
+                    feedContainer.append(feedItem);
+                });
+
+                feedModal.show();
+            });
+        });
+
+
+
+        document.addEventListener('DOMContentLoaded', function() {
+            flatpickr("#field2", {
+                enableTime: true,
+                dateFormat: "Y-m-d H:i",
+            });
+        });
+        document.addEventListener('DOMContentLoaded', function() {
+            flatpickr("#field3", {
+                enableTime: true,
+                dateFormat: "Y-m-d H:i",
+            });
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const dependentsItems = document.querySelectorAll('.dependents-item');
+            const form = document.querySelector('.search-container form');
+            const tickerInput = form.querySelector('input[name="tickers"]');
+
+            dependentsItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    const ticker = this.querySelector('.ticker').getAttribute('data-ticker');
+                    tickerInput.value = ticker; // Set the form's ticker input value
+                    form.submit(); // Submit the form to reload the page
+                });
+            });
+        });
+
+    </script>
+</head>
+<body>
+<h1>Search Filter</h1>
+<div class="search-container">
+    <form action="#" th:action="@{/api/sentimentData}" method="get">
+        <div class="form-group">
+            <label for="field1">Ticker :</label>
+        </div>
+        <div class="form-group">
+            <input type="text" id="field1" name="tickers">
+        </div>
+        <div class="form-group">
+            <label for="field2">Time From :</label>
+        </div>
+        <div class="form-group">
+            <input type="text" id="field2" name="timeFrom">
+        </div>
+        <div class="form-group">
+            <label for="field2">Time To :</label>
+        </div>
+        <div class="form-group">
+            <input type="text" id="field3" name="timeTo">
+        </div>
+        <div class="form-group">
+            <label for="topics">Select Topic:</label>
+        </div>
+        <div class="form-group">
+            <select id="topics" name="topics">
+                <option value="none">none</option>
+                <option value="blockchain">blockchain</option>
+                <option value="earnings">earnings</option>
+                <option value="ipo">ipo</option>
+                <option value="mergers_and_acquisitions">mergers_and_acquisitions</option>
+                <option value="financial_markets">financial_markets</option>
+                <option value="economy_fiscal">economy_fiscal</option>
+                <option value="economy_monetary">economy_monetary</option>
+                <option value="economy_macro">economy_macro</option>
+                <option value="energy_transportation">energy_transportation</option>
+                <option value="finance">finance</option>
+                <option value="life_sciences">life_sciences</option>
+                <option value="manufacturing">manufacturing</option>
+                <option value="real_estate">real_estate</option>
+                <option value="retail_wholesale">retail_wholesale</option>
+                <option value="technology">technology</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <button type="submit">Search</button>
+        </div>
+    </form>
+</div>
+<h3>Over All Average Sentiment </h3>
+<div class="grid-container">
+    <div  class="over-all-grid-item" id="average-score" th:classappend="${overAllSentimentScore.sentimentLabel.toLowerCase()}" >
+    <div class="ticker">OVER ALL</div>
+    <div class="label"  >
+        Average Score: <span th:text="${overAllSentimentScore.overAllSentimentScore}"></span>
+    </div>
+    </div>
+</div>
+<h3>Average Ticker Sentiment</h3>
+<div class="grid-container">
+    <div class="grid-item" th:each="data : ${sentimentMainDataList}" th:classappend="${data.sentimentLabel.toLowerCase()}">
+        <div class="ticker" th:text="${data.ticker}" th:attr="data-ticker=${data.ticker}">{item.ticker}</div>
+        <div class="score">Average Score:<span th:text="${data.averageScore}" th:classappend="score"></span></div>
+        <div class="label"><span th:text="${data.sentimentLabel}" th:classappend="label"></span></div>
+    </div>
+</div>
+
+<br>
+<h3> Impacted Tickers Sentiment</h3>
+<div class="grid-container">
+    <div class="dependents-item" th:each="data : ${sentimentDataList}" th:classappend="${data.sentimentLabel.toLowerCase()}">
+        <div class="ticker" th:text="${data.ticker}" th:attr="data-ticker=${data.ticker}">{item.ticker}</div>
+        <div class="score">Average Score:<span th:text="${data.averageScore}" th:classappend="score"></span></div>
+        <div class="label"><span th:text="${data.sentimentLabel}" th:classappend="label"></span></div>
+    </div>
+</div>
+<!--<div id="feed-container"></div>-->
+
+<!-- Modal -->
+<div class="modal fade" id="feedModal" tabindex="-1" role="dialog" aria-labelledby="feedModalLabel" aria-hidden="true">
+    <div class="modal-dialog custom-modal-width" role="document">
+        <div class="modal-content" style="width: 700px;">
+            <div class="modal-header">
+                <h5 class="modal-title" id="feedModalLabel">Feed</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body custom-modal-body">
+                <table class="table table-striped table-bordered">
+                    <thead>
+                    <tr>
+                        <th>Link</th>
+                        <th>Summary</th>
+                        <th>Published</th>
+                    </tr>
+                    </thead>
+                    <tbody id="feed-container">
+                    <!-- Feed items will be appended here -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
